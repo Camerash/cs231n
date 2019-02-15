@@ -111,7 +111,36 @@ def svm_loss_vectorized(W, X, y, reg):
   # loss.                                                                     #
   #############################################################################
   
-  
+  # Consider gradient calculation's precondition is the margin larger than 1
+  # We can reuse the margin calculated in the above loss calculation
+  gradient_factors = margins # Ref
+
+  # dLi/dWj = 1(xiwj - xiwyi + delta > 0)xi
+  # Focusing on this part: 1(xiwj - xiwyi + delta > 0)
+  # According to the eqt, THE FACTOR OF ELEMENTS WHERE margins > 0 is 1
+  gradient_factors[margins > 0] = 1 # Setting elements be 1 where the margins is larger than 0
+
+  # dLi/dWyi = - sum_(j!=yi)(1(xiwj - xiwyi + delta > 0)xi)
+  # Since xi can be taken out of the summation:
+  # Focusing on this part: - sum_(j!=yi)(1(xiwj - xiwyi + delta > 0)
+  # According to the eqt, THE FACTOR OF ELEMENTS WHERE j = yi should be THE NEGATIVE OF THE SUM OF ALL FACTORS (calculated just above) WHERE j =/= yi
+  # Therefore:
+  row_count_sum = np.sum(gradient_factors, axis=1) # Squashing (summing) the margins count along the rows (Same data, different classes)
+  # The gradient factors of THE CORRECT CLASS is therefore the NEGATIVE OF SUM OF INCORRECT CLASS SCORE
+  # That is:
+  gradient_factors[np.arange(num_train), y] = -row_count_sum.T
+
+  # Finally matrix multiplication for the missing term xi in the above steps
+  # X has size has size (N, D), Gradient_factor has size (N, C), we want a gradient matrix with size (D, C)
+  # Therefore transpose X
+  dW = np.matmul(X.T, gradient_factors)
+
+  # why you so MEAN (/jk here we divide gradients by number of data to get mean)
+  dW /= num_train
+
+  # Regularazation
+  # If you use half regularize strength in calculating loss, here you don't have to double it up
+  dW += 2 * reg * W
 
   #############################################################################
   #                             END OF YOUR CODE                              #

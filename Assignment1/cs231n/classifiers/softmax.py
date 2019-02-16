@@ -30,7 +30,15 @@ def softmax_loss_naive(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  num_train = X.shape[0]
+  for i in xrange(num_train):
+    prob = np.matmul(X[i], W) # Scores in the scope of SVM, here we describe this as unnormalized probabilities
+    prob -= np.max(prob) # Stablize data
+    exp_prob = np.exp(prob) # Get e^(prob) of the respective data
+    loss += -prob[y[i]] + np.log(np.sum(exp_prob)) 
+
+  loss /= num_train
+  loss += 0.5 * reg * np.sum(W * W)
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################

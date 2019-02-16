@@ -129,7 +129,8 @@ class KNearestNeighbor(object):
         X_train_sq_sum = np.sum(self.X_train**2, axis=1, keepdims=True).T
         X_X_train_mul = np.matmul(X, self.X_train.T)
         X_train_X_mul = np.matmul(self.X_train, X.T).T
-        dists = np.sqrt(X_sq_sum + X_train_sq_sum - X_X_train_mul - X_train_X_mul)
+        dists = np.sqrt(X_sq_sum + X_train_sq_sum - X_X_train_mul -
+                        X_train_X_mul)
 
         #########################################################################
         #                         END OF YOUR CODE                              #

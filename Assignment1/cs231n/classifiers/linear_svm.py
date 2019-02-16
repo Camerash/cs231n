@@ -92,8 +92,8 @@ def svm_loss_vectorized(W, X, y, reg):
   correct_class_scores = score_matrix[np.arange(num_train),y] # Get all the correct classes score using np index trick
   margins = np.maximum(0, score_matrix - np.matrix(correct_class_scores).T + 1) # Calculate margins
   margins[np.arange(num_train), y] = 0 # Set scores for the correct classes be 0
-  losses = np.sum(margins, axis=1) # Sum all scores along the rows (Same data, different classes)
-  loss = np.mean(losses, axis=0) # Mean all scores along column (different data)
+  losses = np.sum(margins) # Sum all scores along the rows (Same data, different classes)
+  loss = losses / num_train # Mean all scores along column (different data)
   loss += reg * np.sum(W * W) # Add regularization
 
   #############################################################################

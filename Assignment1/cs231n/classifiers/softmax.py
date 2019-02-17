@@ -31,14 +31,21 @@ def softmax_loss_naive(W, X, y, reg):
   # regularization!                                                           #
   #############################################################################
   num_train = X.shape[0]
-  for i in xrange(num_train):
+  num_class = W.shape[1]
+  for i in range(num_train):
     prob = np.matmul(X[i], W) # Scores in the scope of SVM, here we describe this as unnormalized probabilities
-    prob -= np.max(prob) # Stablize data
+    prob += -np.max(prob) # Stablize data, check out: https://deepnotes.io/softmax-crossentropy
     exp_prob = np.exp(prob) # Get e^(prob) of the respective data
-    loss += -prob[y[i]] + np.log(np.sum(exp_prob)) 
-
+    loss += -prob[y[i]] + np.log(np.sum(exp_prob))
+    # Following equation: check out: https://deepnotes.io/softmax-crossentropy
+    for j in range(num_class):
+      dW[:, j] += (np.exp(prob[j]) * X[i] / np.sum(exp_prob)) # -pj*pi
+      if j == y[i]: # i == j
+        dW[:, j] -= X[i] # pi - pj*pi
   loss /= num_train
   loss += reg * np.sum(W * W)
+  dW /= num_train
+  dW += 2*reg*W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
@@ -62,7 +69,22 @@ def softmax_loss_vectorized(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  num_train = X.shape[0]
+  prob = np.matmul(X, W) # Scores in the scope of SVM, here we describe this as unnormalized probabilities
+  prob += -np.max(prob) # Stablize data, check out: https://deepnotes.io/softmax-crossentropy
+  sum_of_prob_row = np.sum(np.exp(prob), axis=1) # Get sum of e^(prob) of the respective data
+  loss = -np.sum(prob[np.arange(num_train), y]) + np.sum(np.log(sum_of_prob_row), axis=0)
+  dW = (X / sum_of_prob_row[:,np.newaxis]) # Convert sum of prob row to a column vector, divide X by that
+  dW = np.matmul(dW.T, np.exp(prob)) # X.T multiply by matrix of e^(prob)
+  
+  pi_factor = np.zeros_like(prob)
+  pi_factor[np.arange(num_train), y] = 1
+  dW -= np.matmul(X.T, pi_factor) # Add the necessary pi factor where position i = j
+
+  loss /= num_train
+  loss += reg * np.sum(W * W)
+  dW /= num_train
+  dW += 2*reg*W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################

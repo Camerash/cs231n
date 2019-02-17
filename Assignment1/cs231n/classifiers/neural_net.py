@@ -76,7 +76,9 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    pass
+    layer1 = np.matmul(X, W1) + b1
+    relu = np.maximum(layer1, 0)
+    scores = np.matmul(relu, W2) + b2
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -93,7 +95,12 @@ class TwoLayerNet(object):
     # in the variable loss, which should be a scalar. Use the Softmax           #
     # classifier loss.                                                          #
     #############################################################################
-    pass
+    scores += -np.max(scores) # Stablize data, check out: https://deepnotes.io/softmax-crossentropy
+    sum_scores = np.sum(np.exp(scores), axis=1) # Get sum of e^(scores) of the respective data
+    loss = -np.sum(scores[np.arange(N), y]) + np.sum(np.log(sum_scores), axis=0)
+   
+    loss /= N # Mean
+    loss += reg * (np.sum(W1 * W1) + np.sum(W2 * W2)) #Reg
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -105,7 +112,17 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+    dScore = np.exp(scores) / sum_scores[:,np.newaxis]
+
+    pi_factor = np.zeros_like(scores)
+    pi_factor[np.arange(N), y] = 1
+    dScore -= pi_factor # Add the necessary pi factor where position i = j
+
+    grads['W2'] = (np.matmul(relu.T, dScore) / N) + (2 * reg * W2)
+    grads['b2'] = np.sum(dScore, axis=0) / N
+    dRelu = np.matmul(dScore, W2.T) * (layer1 > 0)
+    grads['W1'] = (np.matmul(X.T, dRelu) / N) + (2 * reg * W1)
+    grads['b1'] = np.sum(dRelu, axis=0) / N
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################

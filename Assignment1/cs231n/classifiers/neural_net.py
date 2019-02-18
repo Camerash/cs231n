@@ -76,9 +76,9 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    layer1 = np.matmul(X, W1) + b1
-    relu = np.maximum(layer1, 0)
-    scores = np.matmul(relu, W2) + b2
+    layer1 = np.matmul(X, W1) + b1 # Input * L1 weight + L1 Bias
+    relu = np.maximum(layer1, 0) # Applu ReLU, that is rectifiying the output of L1
+    scores = np.matmul(relu, W2) + b2 # Output of ReLU * L2 weight + L2 bias
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -95,6 +95,7 @@ class TwoLayerNet(object):
     # in the variable loss, which should be a scalar. Use the Softmax           #
     # classifier loss.                                                          #
     #############################################################################
+    # Apply same old vectorized loss logic from softmax
     scores += -np.max(scores) # Stablize data, check out: https://deepnotes.io/softmax-crossentropy
     sum_scores = np.sum(np.exp(scores), axis=1) # Get sum of e^(scores) of the respective data
     loss = -np.sum(scores[np.arange(N), y]) + np.sum(np.log(sum_scores), axis=0)
@@ -112,14 +113,22 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
+    # Apply same old vectorized gradient logic from softmax
+    # Its a bit different tho compared to the logic in softmax.py
+    # Here the multiplyer of dScore is the input of layer W1 / W2, see below
     dScore = np.exp(scores) / sum_scores[:,np.newaxis]
 
     pi_factor = np.zeros_like(scores)
     pi_factor[np.arange(N), y] = 1
-    dScore -= pi_factor # Add the necessary pi factor where position i = j
+    dScore -= pi_factor # Subtract the necessary pi factor where position i = j
 
+    # Input of L2 is the output of ReLU layer, therefore matmul relu.T to dScore
+    # This is like what we did in the softmax classifer we did previously
     grads['W2'] = (np.matmul(relu.T, dScore) / N) + (2 * reg * W2)
     grads['b2'] = np.sum(dScore, axis=0) / N
+
+    # Input of L1 is the input X, therefore matmul X.T to dScore
+    # Same as logic above
     dRelu = np.matmul(dScore, W2.T) * (layer1 > 0)
     grads['W1'] = (np.matmul(X.T, dRelu) / N) + (2 * reg * W1)
     grads['b1'] = np.sum(dRelu, axis=0) / N
@@ -166,7 +175,13 @@ class TwoLayerNet(object):
       # TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
-      pass
+      if batch_size > num_train:
+        # Cannot take a larger sample than population when 'replace=False'
+        batch_indices = np.random.choice(num_train, batch_size, replace=True)
+      else:
+        batch_indices = np.random.choice(num_train, batch_size, replace=False)
+      X_batch = X[batch_indices]
+      y_batch = y[batch_indices]
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -181,7 +196,10 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
-      pass
+      self.params['W1'] += grads['W1'] * -learning_rate
+      self.params['b1'] += grads['b1'] * -learning_rate
+      self.params['W2'] += grads['W2'] * -learning_rate
+      self.params['b2'] += grads['b2'] * -learning_rate
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################

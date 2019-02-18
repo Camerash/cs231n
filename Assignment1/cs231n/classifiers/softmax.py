@@ -74,13 +74,14 @@ def softmax_loss_vectorized(W, X, y, reg):
   prob += -np.max(prob) # Stablize data, check out: https://deepnotes.io/softmax-crossentropy
   sum_of_prob_row = np.sum(np.exp(prob), axis=1) # Get sum of e^(prob) of the respective data
   loss = -np.sum(prob[np.arange(num_train), y]) + np.sum(np.log(sum_of_prob_row), axis=0)
-  dW = (X / sum_of_prob_row[:,np.newaxis]) # Convert sum of prob row to a column vector, divide X by that
-  dW = np.matmul(dW.T, np.exp(prob)) # X.T multiply by matrix of e^(prob)
-  
+  dW = (np.exp(prob) / sum_of_prob_row[:,np.newaxis]) # Convert sum of prob row to a column vector, divide  matrix of e^(prob) by that
+ 
   pi_factor = np.zeros_like(prob)
   pi_factor[np.arange(num_train), y] = 1
-  dW -= np.matmul(X.T, pi_factor) # Add the necessary pi factor where position i = j
+  dW -= pi_factor # Subtract the necessary pi factor where position i = j
 
+  dW = np.matmul(X.T, dW) # Multiply the dW score matrix by input X
+  
   loss /= num_train
   loss += reg * np.sum(W * W)
   dW /= num_train

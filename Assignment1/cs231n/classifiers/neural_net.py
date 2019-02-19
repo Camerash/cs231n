@@ -244,7 +244,14 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
-    pass
+    # Get the score matrix of layer 1 by multiplying X and W1 and adding the layer bias
+    L1_score_matrix = np.matmul(X, self.params['W1']) + self.params['b1']
+    # Apply ReLU
+    ReLU_score_matrix = np.maximum(L1_score_matrix, 0)
+    # Get the score matrix of layer 2 by multiplying output from ReLU and W2 and adding the layer bias
+    L2_score_matrix = np.matmul(ReLU_score_matrix, self.params['W2']) + self.params['b2']
+    # Get the max arg of every row (i.e. along the column), i.e. the predicted label
+    y_pred = np.argmax(L2_score_matrix, axis=1)
     ###########################################################################
     #                              END OF YOUR CODE                           #
     ###########################################################################

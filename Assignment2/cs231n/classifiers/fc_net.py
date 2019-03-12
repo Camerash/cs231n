@@ -253,7 +253,7 @@ class FullyConnectedNet(object):
         cache = {}
         out, cache['affine'] = affine_forward(X, self.params['W1'], self.params['b1'])
         if self.use_batchnorm:
-          out, cache['bn'] = batchnorm_forward(out, self.params['gamma1'], self.params['beta1'], self.bn_params[i-1])
+          out, cache['bn'] = batchnorm_forward(out, self.params['gamma1'], self.params['beta1'], self.bn_params[0])
         out, cache['relu'] = relu_forward(out)
         if self.use_dropout:
           out, cache['dropout'] = dropout_forward(out, self.dropout_param)
@@ -312,7 +312,7 @@ class FullyConnectedNet(object):
             dRelu = relu_backward(dOut, caches[i-1]['relu'])
           
           if self.use_batchnorm:
-            dBn = batchnorm_backward(dRelu, caches[i-1]['bn'])
+            dBn, grads['gamma{}'.format(i)], grads['beta{}'.format(i)] = batchnorm_backward(dRelu, caches[i-1]['bn'])
             dOut, grads['W{}'.format(i)], grads['b{}'.format(i)] = affine_backward(dBn, caches[i-1]['affine'])
           else:
             dOut, grads['W{}'.format(i)], grads['b{}'.format(i)] = affine_backward(dRelu, caches[i-1]['affine'])

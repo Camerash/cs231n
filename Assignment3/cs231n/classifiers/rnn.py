@@ -143,9 +143,12 @@ class CaptioningRNN(object):
         # f(2)
         x, cache_embed = word_embedding_forward(captions_in, W_embed)
 
-        # f(3a - RNN)
         if self.cell_type == 'rnn':
+          # f(3a - RNN)
           h, cache_h = rnn_forward(x, h0, Wx, Wh, b)
+        else:
+          # f(3b - LSTM)
+          h, cache_h = lstm_forward(x, h0, Wx, Wh, b)
 
         # f(4)
         out, cache_out = temporal_affine_forward(h, W_vocab, b_vocab)
@@ -156,9 +159,12 @@ class CaptioningRNN(object):
         # b(4)
         dh, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dout.reshape(-1, W_vocab.shape[1]), cache_out)
 
-        # b(3a - RNN)
         if self.cell_type == 'rnn':
+          # b(3a - RNN)
           dx, dh0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dh, cache_h)
+        else:
+          # b(3b - LSTM)
+          dx, dh0, grads['Wx'], grads['Wh'], grads['b'] = lstm_backward(dh, cache_h)
 
         # b(2)
         grads['W_embed'] = word_embedding_backward(dx, cache_embed)
@@ -227,6 +233,7 @@ class CaptioningRNN(object):
         # a loop.                                                                 #
         ###########################################################################
         h, _ = affine_forward(features, W_proj, b_proj)
+        c = 0
         word_idx = 0
         
         for t in range(max_length):
@@ -236,9 +243,12 @@ class CaptioningRNN(object):
             else:
                 word_vector, _ = word_embedding_forward(word_idx, W_embed)
 
-            # (2) Make an RNN step
+            # (2) Make an RNN/LSTM step
             if self.cell_type == 'rnn':
-                h, _ = rnn_step_forward(word_vector.reshape(-1, Wx.shape[0]), h, Wx, Wh, b)  
+                h, _ = rnn_step_forward(word_vector.reshape(-1, Wx.shape[0]), h, Wx, Wh, b)
+            else:
+                h, c, _ = lstm_step_forward(word_vector.reshape(-1, Wx.shape[0]), h, c, Wx, Wh, b)
+
 
             # (3) Apply the learned affine transformation
             out, _ = affine_forward(h, W_vocab, b_vocab)

@@ -137,7 +137,34 @@ class CaptioningRNN(object):
         # defined above to store loss and gradients; grads[k] should give the      #
         # gradients for self.params[k].                                            #
         ############################################################################
-        pass
+        # f(1)
+        h0, cache_h0 = affine_forward(features, W_proj, b_proj)
+
+        # f(2)
+        x, cache_embed = word_embedding_forward(captions_in, W_embed)
+
+        # f(3a - RNN)
+        if self.cell_type == 'rnn':
+          h, cache_h = rnn_forward(x, h0, Wx, Wh, b)
+
+        # f(4)
+        out, cache_out = temporal_affine_forward(h, W_vocab, b_vocab)
+
+        # f(5)
+        loss, dout = temporal_softmax_loss(out, captions_out, mask, verbose=False)
+
+        # b(4)
+        dh, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dout.reshape(-1, W_vocab.shape[1]), cache_out)
+
+        # b(3a - RNN)
+        if self.cell_type == 'rnn':
+          dx, dh0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dh, cache_h)
+
+        # b(2)
+        grads['W_embed'] = word_embedding_backward(dx, cache_embed)
+
+        # b(1)
+        _, grads['W_proj'], grads['b_proj'] = affine_backward(dh0, cache_h0)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -199,7 +226,29 @@ class CaptioningRNN(object):
         # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
         # a loop.                                                                 #
         ###########################################################################
-        pass
+        h, _ = affine_forward(features, W_proj, b_proj)
+        word_idx = 0
+        
+        for t in range(max_length):
+            # (1) Embed the previous word
+            if t == 0:
+                word_vector = np.zeros((N, Wx.shape[0]))
+            else:
+                word_vector, _ = word_embedding_forward(word_idx, W_embed)
+
+            # (2) Make an RNN step
+            if self.cell_type == 'rnn':
+                h, _ = rnn_step_forward(word_vector.reshape(-1, Wx.shape[0]), h, Wx, Wh, b)  
+
+            # (3) Apply the learned affine transformation
+            out, _ = affine_forward(h, W_vocab, b_vocab)
+
+            # (4) Select the word with the highest score as the next word
+            word_idx = np.argmax(out, axis=1).reshape(-1, 1)
+            captions[:, t:t+1] = word_idx
+
+            if self.idx_to_word == '<END>':
+                break
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
